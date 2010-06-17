@@ -88,4 +88,9 @@ Prawn::Document.generate('font_calculations.pdf') do
   text "Using TTF", :size => 20
   demonstration
   
+  move_down 75
+  font "#{Prawn::BASEDIR}/data/fonts/lavoisier.otf"
+  text "Using OTF", :size => 20
+  demonstration
+  
 end
