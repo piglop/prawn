@@ -262,22 +262,61 @@ module Prawn
 
         compressed_font = Zlib::Deflate.deflate(font_content)
 
-        fontfile = @document.ref!(:Length => compressed_font.size,
-                                 :Length1 => font_content.size,
-                                 :Filter => :FlateDecode )
+        if @ttf.ttf?
+          fontfile_values = {
+            :Length => compressed_font.size,
+            :Length1 => font_content.size,
+            :Filter => :FlateDecode
+          }
+        elsif @ttf.otf?
+          fontfile_values = {
+            :Length => compressed_font.size,
+            :Length1 => font_content.size,
+            :Filter => :FlateDecode,
+            :Subtype => :OpenType,
+          }
+        else
+          raise "Unsupported font format"
+        end
+
+        fontfile = @document.ref!(fontfile_values)
         fontfile << compressed_font
 
-        descriptor = @document.ref!(:Type        => :FontDescriptor,
-                                   :FontName    => basename.to_sym,
-                                   :FontFile2   => fontfile,
-                                   :FontBBox    => bbox,
-                                   :Flags       => pdf_flags,
-                                   :StemV       => stemV,
-                                   :ItalicAngle => italic_angle,
-                                   :Ascent      => ascender,
-                                   :Descent     => descender,
-                                   :CapHeight   => cap_height,
-                                   :XHeight     => x_height)
+        if @ttf.ttf?
+          descriptor_values = {
+            :Type        => :FontDescriptor,
+            :FontName    => basename.to_sym,
+            :FontFile2   => fontfile,
+            :FontBBox    => bbox,
+            :Flags       => pdf_flags,
+            :StemV       => stemV,
+            :ItalicAngle => italic_angle,
+            :Ascent      => ascender,
+            :Descent     => descender,
+            :CapHeight   => cap_height,
+            :XHeight     => x_height
+          }
+        elsif @ttf.otf?
+          descriptor_values = {
+            :Type        => :FontDescriptor,
+            :FontName    => basename.to_sym,
+            :FontFile3   => fontfile,
+            :Subtype     => :OpenType,
+            :OpenType    => :Type1,
+            :FontBBox    => bbox,
+            :Flags       => pdf_flags,
+            :StemV       => stemV,
+            :ItalicAngle => italic_angle,
+            :Ascent      => ascender,
+            :Descent     => descender,
+            :CapHeight   => cap_height,
+            :XHeight     => x_height
+          }
+        else
+          raise "Unsupported font format"
+        end
+
+        descriptor = @document.ref!(descriptor_values)
 
         hmtx = font.horizontal_metrics
         widths = font.cmap.tables.first.code_map.map { |gid|
@@ -312,13 +351,31 @@ module Prawn
         cmap << to_unicode_cmap
         cmap.compress_stream
 
-        reference.data.update(:Subtype => :TrueType,
-                              :BaseFont => basename.to_sym,
-                              :FontDescriptor => descriptor,
-                              :FirstChar => 32,
-                              :LastChar => 255,
-                              :Widths => @document.ref!(widths),
-                              :ToUnicode => cmap)
+        if @ttf.ttf?
+          reference_values = {
+            :Subtype => :TrueType,
+            :BaseFont => basename.to_sym,
+            :FontDescriptor => descriptor,
+            :FirstChar => 32,
+            :LastChar => 255,
+            :Widths => @document.ref!(widths),
+            :ToUnicode => cmap
+          }
+        elsif @ttf.otf?
+          reference_values = {
+            :Subtype => :Type0,
+            :BaseFont => basename.to_sym,
+            :FontDescriptor => descriptor,
+            :FirstChar => 32,
+            :LastChar => 255,
+            :Widths => @document.ref!(widths),
+            :ToUnicode => cmap
+          }
+        else
+          raise "Unsupported font format"
+        end
+
+        reference.data.update(reference_values)
       end
 
       UNICODE_CMAP_TEMPLATE = <<-STR.strip.gsub(/^\s*/, "")

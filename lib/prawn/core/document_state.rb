@@ -10,7 +10,7 @@ module Prawn
           @store = Prawn::Core::ObjectStore.new(:info => options[:info])
         end
 
-        @version                 = 1.3
+        @version                 = 1.6
         @pages                   = []
         @page                    = nil
         @trailer                 = {}
